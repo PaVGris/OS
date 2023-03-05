@@ -1,0 +1,4 @@
+Cannot generate into /home/gpavel/Desktop/OS/Lab2
+It is already used for project /home/gpavel/Desktop/Operational System/OS/Lab2
+
+Please either delete it manually or select another generation directory

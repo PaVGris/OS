@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "types.h": "c",
+        "utils.h": "c",
+        "labrary.h": "c"
+    }
+}

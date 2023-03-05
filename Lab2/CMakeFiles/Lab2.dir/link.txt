@@ -1,0 +1,1 @@
+/usr/bin/cc -rdynamic CMakeFiles/Lab2.dir/src/parent.o CMakeFiles/Lab2.dir/src/utils.o -o Lab2 
