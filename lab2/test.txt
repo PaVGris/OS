@@ -1,0 +1,8 @@
+Output.txt
+FirstTest.
+False
+CCCCCCCCCCCCCCCCCCC.
+End;
+...........................a
+wave...
+wrongString
