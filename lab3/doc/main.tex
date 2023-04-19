@@ -1,0 +1,397 @@
+
+\documentclass[pdf, unicode, 12pt, a4paper,oneside,fleqn]{article}
+\usepackage{graphicx}
+\graphicspath{{img/}}
+\usepackage{log-style}
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \bfseries
+
+        {\Large Московский авиационный институт\\ (национальный исследовательский университет)}
+        
+        \vspace{48pt}
+        
+        {\large Факультет информационных технологий и прикладной математики}
+        
+        \vspace{36pt}
+        
+        {\large Кафедра вычислительной математики и~программирования}
+        
+        \vspace{48pt}
+        
+        Лабораторная работа \textnumero 3 по курсу \enquote{Операционные системы}
+
+        \vspace{48pt}
+
+        Управление потоками в ОС. Обеспечение синхронизации между потоками
+    \end{center}
+    
+    \vspace{140pt}
+    
+    \begin{flushright}
+    \begin{tabular}{rl}
+    Студент: & П.\,Ф. Гришин \\
+    Преподаватель: & Е. \,С. Миронов \\
+    Группа: & М8О-201Б-21 \\
+    Вариант: & 1 \\
+    Дата: & \\
+    Оценка: & \\
+    Подпись: & \\
+    \end{tabular}
+    \end{flushright}
+    
+    \vfill
+    
+    \begin{center}
+    \bfseries
+    Москва, \the\year
+    \end{center}
+\end{titlepage}
+    
+\pagebreak
+
+\section{Постановка задачи}
+
+Составить программу на языке Си, обрабатывающую данные в многопоточном
+режиме. При обработки использовать стандартные средства создания потоков
+операционной системы (Windows/Unix). Ограничение потоков должно быть задано 
+ключом запуска вашей программы.
+
+Так же необходимо уметь продемонстрировать количество потоков, используемое 
+вашей программой с помощью стандартных средств операционной системы.
+
+В отчете привести исследование зависимости ускорения и эффективности 
+алгоритма от входящих данных и количества потоков. Получившиеся результаты 
+необходимо объяснить.
+
+Отсортировать массив целых чисел при помощи битонической сортировки.
+
+\section{Сведения о программе}
+
+Программа написанна на Си в Unix подобной операционной системе на базе ядра Linux.
+Для компиляции требуется ключ -lpthread, для запуска программы нелбходимо указать
+в качестве аргумента количество потоков, которые максимально могут быть использованы.
+
+Программа сортирует массив с помощью битонной сортировки.
+Сначала пользователь должен ввести колличество элементов массива.
+Далее должен передать все элементы.
+
+Существует три глобальных переменных, которые являются мьютексом и 2 переменнами колличества потоков,
+используемые и максимальные. Их использование между потоками регулируется мьютексом.
+Сортируемый массив передается как указатель. И для него не нужен мьютекс, так как 
+каждый поток работает на своем участке, не перекрываемом другими.
+
+\section{Общий метод и алгоритм решения}
+
+Параментром запуска программы мы указваем максимальное количество использумых потоков.
+
+Далее мы указываем длину массива, и создаем массив дополив длину до ближайшего числа $2^n$.
+Так как это необходимо для работы алгоритма сортировки. Далее мы считываем 
+данные, а оставшийся участок массива заполняем максимально возможными элементами,
+чтобы после сортировки они оказалить в конце массива, и мы могли также легко их удалить.
+
+Далее вызывается функция сортировки. Сначала мы рекурсивно разбиваем 
+массив по полам, задавая целевое направление сначала вниз, а потом вверх, чтобы получить
+битонную последовательность. При этом пока у нас есть свободные потоки мы выдиляем под вторую
+половину отдельный поток, а когда они закончатся начинаем работать в однопотоке, на выделенном участке.
+
+Когда мы достигаем массива из одного элемента его можно считать отсортированным, как по возрастанию так
+и по убыванию. Поэтому два соседних элемента можно считать битонной последовательностью, которую можно собрать в одну
+возрастающую или убывающую.
+
+Начинаем объядинять битонные последовательности. Находим расстояние между двумя
+элиментами, которые будем сравнивать, оно равно половине участка массива.
+Далее мы проходим по половине участка и сравниваем каждый элемент с элементом через заданное расстояние.
+При необходимости меняем их местами. Далее разбиваем данный участок на 2 и повторяем слияние, и так пока его длина не станет равна 1.
+
+Таким образом мы получаем битоническую последовательность большего размера, к которой можно опять применить слияние.
+Повторяем эту процедуру до оканчания сортироки. При этом когда мы будем делать слияние для 2 участков, созданных
+разными потоками, слияние мы опять разбиваем на несколько потоков, пока это возможно.
+
+При всем этом если один поток подготовил последовательность, а второй еще нет, то первый его ждет, из чего
+следует вывод, что увеличение производительности будет только при увеличении количества потоков
+до следующей степени двойки.
+
+\section{Листинг программы}
+
+{\large\textbf{main.c}}
+
+\begin{lstlisting}[language=C]
+#include "library.h"
+#include "bitonic.h"
+#include "pthread.h"
+#include <sys/time.h>
+
+#define INVALID_INPUT 403
+#define WRONG_ANSWER 405
+
+#define MAXINT 2147483647
+#define UP 1
+#define DOWN 0
+
+pthread_mutex_t lock;
+size_t max_threads = 1;
+size_t use_threads = 1;
+
+void InitArgs(ArgsBitonic *args, int *array, int size, int start, int dir){
+    args->array = array;
+    args->size  = size;
+    args->start = start;
+    args->dir   = dir;
+}
+
+
+void Comparator(int *array, int i, int j, int dir){
+    if(dir == (array[i] > array[j])){
+        int temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
+
+void BitonicMergeSinglThread(ArgsBitonic *args){
+    if(args->size > 1){
+        int nextsize = args->size / 2;
+        for(int i = args->start; i < nextsize + args->start; ++i){
+                Comparator(args->array, i, i + nextsize, args->dir);
+        }
+
+        ArgsBitonic args1;
+        ArgsBitonic args2;
+        InitArgs(&args1, args->array, nextsize, args->start, args->dir);
+        InitArgs(&args2, args->array, nextsize, args->start + nextsize, args->dir);
+        
+        BitonicMergeSinglThread(&args1);
+        BitonicMergeSinglThread(&args2);
+    }
+}
+
+void BitonicSortSinglThread(ArgsBitonic *args){
+    if(args->size > 1){
+        int nextsize = args->size / 2;
+
+        ArgsBitonic args1;
+        ArgsBitonic args2;
+        InitArgs(&args1, args->array, nextsize, args->start, DOWN);
+        InitArgs(&args2, args->array, nextsize, args->start + nextsize, UP);
+
+        BitonicSortSinglThread(&args1);
+        BitonicSortSinglThread(&args2);
+        BitonicMergeSinglThread(args);
+    }
+}
+
+void BitonicMergeMultiThreads(ArgsBitonic *args){
+    if(args->size > 1){        
+        int nextsize = args->size / 2;
+        int isParal = 0;
+        pthread_t tid;
+
+        for(int i = args->start; i < nextsize + args->start; ++i){
+                Comparator(args->array, i, i + nextsize, args->dir);
+        }
+
+        ArgsBitonic args1;
+        ArgsBitonic args2;
+        InitArgs(&args1, args->array, nextsize, args->start, args->dir);
+        InitArgs(&args2, args->array, nextsize, args->start + nextsize, args->dir);
+
+        pthread_mutex_lock(&lock);
+        if(use_threads < max_threads){ 
+            ++use_threads;
+            pthread_mutex_unlock(&lock);
+            isParal = 1;
+            pthread_create(&tid, NULL,(void*) &BitonicMergeMultiThreads, &args1);
+            BitonicMergeMultiThreads(&args2);
+        } else {
+            pthread_mutex_unlock(&lock);
+            BitonicMergeSinglThread(&args1);
+            BitonicMergeSinglThread(&args2);
+        }
+
+        if(isParal){
+            pthread_join(tid, NULL);
+            pthread_mutex_lock(&lock);
+            --use_threads;
+            pthread_mutex_unlock(&lock);
+        }
+    }
+}
+ 
+void BitonicSortMultiThreads(ArgsBitonic *args){
+    if(args->size > 1 ){
+        int nextsize = args->size / 2;
+        int isParal = 0;
+        pthread_t tid;
+
+        ArgsBitonic args1;
+        ArgsBitonic args2;
+        InitArgs(&args1, args->array, nextsize, args->start, DOWN);
+        InitArgs(&args2, args->array, nextsize, args->start + nextsize, UP);
+
+        pthread_mutex_lock(&lock);
+        if(use_threads < max_threads){
+            ++use_threads;
+            pthread_mutex_unlock(&lock);
+            isParal = 1;
+            pthread_create(&tid, NULL,(void*) &BitonicSortMultiThreads, &args1);
+            BitonicSortMultiThreads(&args2);
+        } else {
+            pthread_mutex_unlock(&lock);
+            BitonicSortSinglThread(&args1);
+            BitonicSortSinglThread(&args2);
+        }
+
+        if(isParal){
+            pthread_join(tid, NULL);
+            pthread_mutex_lock(&lock);
+            --use_threads;
+            pthread_mutex_unlock(&lock);
+        }
+        BitonicMergeMultiThreads(args);
+    }
+}
+
+void bitonicsort(int *array, int size, int threads){
+    pthread_mutex_init(&lock, NULL);
+
+    ArgsBitonic args;
+    InitArgs(&args,array,size,0,UP);
+
+    if(threads > 1)
+        max_threads = threads;
+
+    BitonicSortMultiThreads(&args);
+    
+    pthread_mutex_destroy(&lock);
+}
+
+int SizeStep(int Num){
+    int i = 1;
+    while(i < Num)
+        i *= 2;
+    return i;
+}
+
+
+int ThreadSort(int threads, char* nameF){
+    FILE* file;
+    if(threads < 1){
+        printf("ERROR: Incorrect number of threads\n");
+        return INVALID_INPUT;
+    }
+
+    int input_size;
+    file = fopen(nameF, "r");
+    if (file == NULL) printf("ERROR: Can't open this file\n");
+
+    fscanf(file, "%d", &input_size);
+    //находим ближашее число 2^k >= input_size
+    int size_array = SizeStep(input_size);
+    int *array = malloc(sizeof(int)*size_array);
+
+    for(int i = 0; i < input_size; ++i)
+        fscanf(file,"%d", array+i);
+
+    fclose(file);
+
+    for(int i = input_size; i < size_array; ++i)
+        array[i] = MAXINT;
+
+
+    bitonicsort(array, size_array, threads);
+
+    for(int i = 1; i < input_size; ++i) {
+        if(array[i - 1] > array[i]) {
+            printf("ERROR: Something goes wrong. Array is not sorted\n");
+            return WRONG_ANSWER;
+        }
+    }
+    printf("Array is sorted\n");
+
+    free(array);
+    return 0;
+}
+\end{lstlisting}
+
+\section{Демонстрация работы программы}
+
+\begin{alltt}
+gpavel@gpavel-HP-Pavilion-Gaming-Laptop-17-cd1xxx:~/Desktop/OS/tests$ ./lab3_test
+Running main() from /home/gpavel/Desktop/tmpo/tests/_deps/googletest-src/googletest/srс
+[==========] Running 3 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from ThirdLabTests
+[ RUN      ] ThirdLabTests.IncorrectNumberOfThreads
+ERROR: Incorrect number of threads
+ERROR: Incorrect number of threads
+Passed the test for incorrect input of the number of threads
+[       OK ] ThirdLabTests.IncorrectNumberOfThreads (0 ms)
+[ RUN      ] ThirdLabTests.SingleThread
+Array is sorted
+[       OK ] ThirdLabTests.SingleThread (1085 ms)
+[----------] 2 tests from ThirdLabTests (1085 ms total)
+[----------] 1 test from ThirdLabTest
+[ RUN      ] ThirdLabTest.MultiThreads
+Max thread count is 2
+Array is sorted
+Runtime is 604 ms
+
+Max thread count is 3
+Array is sorted
+Runtime is 581 ms
+
+Max thread count is 4
+Array is sorted
+Runtime is 567 ms
+
+Max thread count is 5
+Array is sorted
+Runtime is 536 ms
+
+7Max thread count is 6
+Array is sorted
+Runtime is 555 ms
+
+Max thread count is 7
+Array is sorted
+Runtime is 551 ms
+
+Max thread count is 8
+Array is sorted
+Runtime is 421 ms
+
+Max thread count is 9
+Array is sorted
+Runtime is 362 ms
+[       OK ] ThirdLabTest.MultiThreads (4182 ms)
+[----------] 1 test from ThirdLabTest (4182 ms total)
+[----------] Global test environment tear-down
+[==========] 3 tests from 2 test suites ran. (5267 ms total)
+[ PASSED ] 3 tests.
+gpavel@gpavel-HP-Pavilion-Gaming-Laptop-17-cd1xxx:~/Desktop/OS/tests$
+\end{alltt}
+\pagebreak
+
+\section{Вывод}
+
+Многие языки программирования позволяют пользователю работать с потоками. 
+Создание потоков происходит быстрее, чем создание процессов, за счет того, что
+при создании потока не копируется область памяти, а они все работают с одной
+областью памяти. Поэтому многопоточность используют для ускарения не зависящих
+друг от друга, однотипнях задач, которые будут работать параллельно.
+
+Язык Си предоставляет данный функционал пользователям Unix-подобных операционных
+систем с помощью библиотеки pthread.h. Средствами языка Си можно совершать системные
+запросы на создание и ожидания завершения потока, а также использовать различные
+примитивы синхронизации.
+
+В данной лабораторной работе был реализован и исследован алгоритм битонной сортировки.
+Установив при этом, что используя 9 потока можно молучить выигрыш по времени
+в 2 раза. При дальнейшем увеличении потоков прирост почти не увеличиватся, а
+даже может уменьшаться из-за того, что на управление и переключение потоков 
+уходит больше времени, чем они выигрывают.
+\end{document}
+

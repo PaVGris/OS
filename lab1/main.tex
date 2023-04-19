@@ -1,0 +1,186 @@
+
+\documentclass[pdf, unicode, 12pt, a4paper,oneside,fleqn]{article}
+\usepackage{graphicx}
+\graphicspath{{img/}}
+\usepackage{log-style}
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \bfseries
+
+        {\Large Московский авиационный институт\\ (национальный исследовательский университет)}
+        
+        \vspace{48pt}
+        
+        {\large Факультет информационных технологий и прикладной математики}
+        
+        \vspace{36pt}
+        
+        {\large Кафедра вычислительной математики и~программирования}
+        
+        \vspace{48pt}
+        
+        Лабораторная работа \textnumero 1 по курсу \enquote{Операционные системы}
+
+        \vspace{48pt}
+
+        Приобретение практических навыков диагностики работы программного обеспечения.
+    \end{center}
+    
+    \vspace{150pt}
+    
+    \begin{flushright}
+    \begin{tabular}{rl}
+    Студент: & П.\,Ф. Гришин \\
+    Преподаватель: & Е.\,С. Миронов \\
+    Группа: & М8О-201Б-21 \\
+    Дата: & \\
+    Оценка: & \\
+    Подпись: & \\
+    \end{tabular}
+    \end{flushright}
+    
+    \vfill
+    
+    \begin{center}
+    \bfseries
+    Москва, \the\year
+    \end{center}
+\end{titlepage}
+    
+\pagebreak
+
+\section{Постановка задачи}
+
+При выполнении последующих лабораторных работ необходимо продемонстрировать 
+ключевые системные вызовы, которые в них используются.
+
+Используемые утилиты:strace, ltrace.
+
+\section{Описание утилит}
+
+Strace \--- утилита Linux для отслеживания системных вызовов, которые представляют собой
+механизм трансляции, обеспечивающий интерфейс между процессом и ядром. Работы strace возможна
+благодаря функции ядра ptrace. С помощью данной утилиты можно понять, что процесс пытается сделать в данное время.
+
+Используемые ключи:
+
+\begin{itemize}
+    \item -o file \--- перенаправить вывод протокола в файл
+    \item -f \--- отслежичать системные вызовы у дочерних процессов
+    \item -e trace=filters \--- указываются группы системных вызовов по которым будет фильтроваться вывод.
+\end{itemize}
+
+ltrace \--- утилита Linux, отслеживающая системные вызовы, связанные с динамическими библиотеками.
+
+\section{Примеры использования утилит}
+
+{\large\textbf{Лабораторная работа 2}}
+
+\begin{alltt}
+gpavel@gpavel-HP-Pavilion-Gaming-Laptop-17-cd1xxx:~/Desktop/OS/lab2$ strace -f -e  trace="read,write,dup2,pipe" -o log.txt ./Lab2 
+test.txt
+[60645] PARENT. Enter the name of file to write: Output.txt
+[60645] PARENT. Enter string: CCCCCC.
+[60645] PARENT. Enter string: WrongInput
+[60645] PARENT. Error: "WrongInput" is not valid.
+[60645] PARENT. Enter string: Test
+[60645] PARENT. Error: "Test" is not valid.
+[60645] PARENT. Enter string: Failed
+[60645] PARENT. Error: "Failed" is not valid.
+[60645] PARENT. Enter string: LOL;
+
+[60645] PARENT. Enter string: gpavel@gpavel-HP-Pavilion-Gaming-Laptop-17-cd1xxx:~/Desktop/OS/lab2$ cat log.txt 
+60645 read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P\237\2\0\0\0\0\0"..., 832) = 832
+60645 read(0, "test.txt\n", 1024)       = 9
+60645 read(3, "Output.txt\nCCCCCC.\nWrongInput\nTe"..., 4096) = 47
+60645 write(1, "[60645] PARENT. Enter the name o"..., 60) = 60
+60645 write(5, "Output.txt\0002\37\177\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 256) = 256
+60647 read(4,  <unfinished ...>
+60645 read(6,  <unfinished ...>
+60647 <... read resumed>"Output.txt\0002\37\177\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 64) = 64
+60647 read(8, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P\237\2\0\0\0\0\0"..., 832) = 832
+60647 write(7, "\0", 1)                 = 1
+60645 <... read resumed>"\0", 1)        = 1
+60647 read(4,  <unfinished ...>
+60645 write(1, "[60645] PARENT. Enter string: CC"..., 38 <unfinished ...>
+60647 <... read resumed>"\30\301#2\37\177\0\0\0\310#2\37\177\0\0\1\0\0\0\376\177\0\0\351\376\"2\37\177\0\0"..., 256) = 192
+60645 <... write resumed>)              = 38
+60647 read(4,  <unfinished ...>
+60645 write(5, "CCCCCC.\0\0\0\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60647 <... read resumed>"CCCCCC.\0\0\0\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60645 read(6,  <unfinished ...>
+60647 write(8, "CCCCCC.", 7)            = 7
+60647 write(8, "\n", 1)                 = 1
+60647 write(7, "\0", 1 <unfinished ...>
+60645 <... read resumed>"\0", 1)        = 1
+60647 <... write resumed>)              = 1
+60645 write(1, "[60645] PARENT. Enter string: Wr"..., 41 <unfinished ...>
+60647 read(4,  <unfinished ...>
+60645 <... write resumed>)              = 41
+60645 write(5, "WrongInput\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60647 <... read resumed>"WrongInput\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60645 read(6,  <unfinished ...>
+60647 write(7, "\1", 1 <unfinished ...>
+60645 <... read resumed>"\1", 1)        = 1
+60647 <... write resumed>)              = 1
+60645 write(1, "[60645] PARENT. Error: \"WrongInp"..., 50 <unfinished ...>
+60647 read(4,  <unfinished ...>
+60645 <... write resumed>)              = 50
+60645 write(1, "[60645] PARENT. Enter string: Te"..., 35) = 35
+60645 write(5, "Test\0Input\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60647 <... read resumed>"Test\0Input\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60645 read(6,  <unfinished ...>
+60647 write(7, "\1", 1 <unfinished ...>
+60645 <... read resumed>"\1", 1)        = 1
+60647 <... write resumed>)              = 1
+60645 write(1, "[60645] PARENT. Error: \"Test\" is"..., 44 <unfinished ...>
+60647 read(4,  <unfinished ...>
+60645 <... write resumed>)              = 44
+60645 write(1, "[60645] PARENT. Enter string: Fa"..., 37) = 37
+60645 write(5, "Failed\0put\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60647 <... read resumed>"Failed\0put\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60645 read(6,  <unfinished ...>
+60647 write(7, "\1", 1 <unfinished ...>
+60645 <... read resumed>"\1", 1)        = 1
+60647 <... write resumed>)              = 1
+60645 write(1, "[60645] PARENT. Error: \"Failed\" "..., 46 <unfinished ...>
+60647 read(4,  <unfinished ...>
+60645 <... write resumed>)              = 46
+60645 write(1, "[60645] PARENT. Enter string: LO"..., 35) = 35
+60645 write(5, "LOL;\0d\0put\0\0\0\0\0\0\370\303D\241\376\177\0\0i#\341\323\315U\0\0"..., 256) = 256
+60647 <... read resumed>"LOL;\\0d\\0put\\0\\0\\0\\0\\0\\0\\370\\303D\\241\\376\\177\\0\\0i#\\341\\323\\315U\\0\\0"..., 256) = 256
+60645 read(6,  <unfinished ...>
+60647 write(8, "LOL;", 4)               = 4
+60647 write(8, "\n", 1)                 = 1
+60647 write(7, "\0", 1 <unfinished ...>
+60645 <... read resumed>"\0", 1)        = 1
+60647 <... write resumed>)              = 1
+60645 read(3,  <unfinished ...>
+60647 read(4,  <unfinished ...>
+60645 <... read resumed>"", 4096)       = 0
+60645 write(5, "_quit\0\n\0\0\1\33\3;P\0\0\0\t\0\0\0t\357\377\377\204\0\0\0\244\360\377"..., 256) = 256
+60647 <... read resumed>"_quit\0\n\0\0\1\33\3;P\0\0\0\t\0\0\0t\357\377\377\204\0\0\0\244\360\377"..., 256) = 256
+60645 write(1, "\n\0", 2)               = 2
+60645 write(1, "[60645] PARENT. Enter string: ", 30) = 30
+60647 +++ exited with 0 +++
+60645 +++ exited with 0 +++
+gpavel@gpavel-HP-Pavilion-Gaming-Laptop-17-cd1xxx:~/Desktop/OS/lab2$ 
+
+\end{alltt}
+
+\pagebreak
+
+\section{Вывод}
+
+Strace и ltrace \--- удобные инструменты для системных вызовов, они полезны приотладке и тестировании программ.
+Несмотря на то, что протоколы по умолчанию кажутся слишком объемными, информацию в 
+них можно отфильтровать с помощью ключей.
+
+Утилита strace позволяет отслеживать большинство системных вызовов, тем не менее если нужно
+более точно пронаблюдать за узкими аспектами существуют и другие утилиты, такие как:
+ltrace и ftrace. Такие утилиты пригодились мне для изучения работы программ и поиска ошибок в моих лабораторных работах.
+
+\end{document}
+
