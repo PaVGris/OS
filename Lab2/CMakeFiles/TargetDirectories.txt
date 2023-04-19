@@ -1,4 +1,0 @@
-/home/gpavel/Desktop/Operational System/OS/Lab2/CMakeFiles/Lab2.dir
-/home/gpavel/Desktop/Operational System/OS/Lab2/CMakeFiles/child.dir
-/home/gpavel/Desktop/Operational System/OS/Lab2/CMakeFiles/edit_cache.dir
-/home/gpavel/Desktop/Operational System/OS/Lab2/CMakeFiles/rebuild_cache.dir
