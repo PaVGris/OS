@@ -1,1 +1,0 @@
-/usr/bin/cc -rdynamic CMakeFiles/child.dir/src/child.o CMakeFiles/child.dir/src/utils.o -o child 
